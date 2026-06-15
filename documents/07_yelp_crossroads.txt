@@ -1,5 +1,0 @@
-SOURCE: Yelp
-URL: https://yelp.com/...
-
-[PASTE YELP REVIEWS for Crossroads (or another hall) HERE — replace this whole line with the real text you collected.
-Keep the two header lines above; delete this placeholder once you've pasted.]
