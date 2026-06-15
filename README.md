@@ -38,13 +38,15 @@ blogs, review sites, and threads.
 
 ## Document Sources
 
-10 documents from 10 distinct public sources. **Reddit and Yelp blocked automated collection**
-(HTTP 403 / JavaScript-rendered — exactly the obstacle the assignment warns about), so I used
-student blogs, campus review sites, and the Daily Californian instead. Text was condensed by an
-automated web-fetch step (a small model extracted the substantive review text from each page);
-each file stores its real source URL for attribution. I deliberately included **conflicting
-opinions** across sources and **one official source** for contrast. See the AI Usage section for
-full disclosure of how the text was obtained.
+13 documents from 13 distinct public sources. **Reddit and Yelp blocked automated collection**
+(HTTP 403 / JavaScript-rendered — exactly the obstacle the assignment warns about). Sources 1–10
+came from student blogs, campus review sites, and the Daily Californian, with their text condensed
+by an automated web-fetch step (a small model extracted the substantive review text from each
+page). Sources 11–13 are **raw, verbatim Reddit threads and Yelp reviews** that I copied by hand
+from the blocked sites and cleaned (stripping usernames, vote counts, ads, and sidebars) — these
+are primary-source student text, not paraphrase. Each file stores its real source URL. I
+deliberately included **conflicting opinions** across sources and **one official source** for
+contrast. See the AI Usage section for full disclosure of how the text was obtained.
 
 | #  | Source | Type | URL or file path |
 |----|--------|------|-----------------|
@@ -58,6 +60,9 @@ full disclosure of how the text was obtained.
 | 8  | CampusReel | Dining guide | documents/08_campusreel_meal_plans.txt · https://www.campusreel.org/colleges/university-of-california-berkeley/dining_food |
 | 9  | Berkeley Dining (**official**) | Official page | documents/09_dining_crossroads_official.txt · https://dining.berkeley.edu/crossroads |
 | 10 | The Daily Californian "good/bad/ugly" | Student soundbites | documents/10_dailycal_good_bad_ugly.txt · https://www.dailycal.org/multimedia/dining-halls-the-good-the-bad-the-ugly/ |
+| 11 | r/berkeley "be brutally honest" thread | **Raw Reddit (verbatim)** | documents/11_reddit_best_hall_brutal.txt · https://www.reddit.com/r/berkeley/ |
+| 12 | Yelp — Cafe 3 reviews | **Raw Yelp (verbatim)** | documents/12_yelp_cafe3_reviews.txt · https://www.yelp.com/biz/cafe-3-berkeley |
+| 13 | r/berkeley "best dining hall?" thread | **Raw Reddit (verbatim)** | documents/13_reddit_best_hall_thread2.txt · https://www.reddit.com/r/berkeley/ |
 
 ---
 
@@ -84,7 +89,7 @@ Berkeley..."), I drop a document's leading paragraph when it is under 120 charac
 removes those noise fragments while preserving every real short fact (e.g. "Foothill... famous
 for its gigantic steaks").
 
-**Final chunk count:** **54 chunks** across 10 documents.
+**Final chunk count:** **75 chunks** across 13 documents.
 
 ---
 
@@ -254,9 +259,11 @@ Retrieved from: • Study Abroad Foundation (SAF) blog — https://www.studyabro
 | 2 | Gold plan flex dollars | Conflict: $500 (SAF) vs 750 (CampusReel) | "Sources disagree: $500 [1] vs 750 [2]" | Relevant | **Accurate** |
 | 3 | Why Clark Kerr is inconvenient | Farthest hall, 15–20 min uphill walk, long lines / leave half-full | Far location + long lines + 15–20 min walk, food still praised | Relevant | **Accurate** |
 | 4 | Do students agree on Cafe 3? | No — "one of the worst" vs "safe/convenient/homey" | "Sources disagree: 'one of the worst' vs 'homey and casual'" | Relevant | **Accurate** |
-| 5 | Best dining hall per students | Contested: Clark Kerr #1 (one source), Crossroads #1 (another), Foothill "objectively best" (another) | Declared **Foothill** is best [4] (with a partial hedge) | Off-target | **Inaccurate** |
+| 5 | Best dining hall per students | Contested: Clark Kerr #1 (one source), Crossroads #1 (another), Foothill "objectively best" (another) | "I don't have enough information on that." (refuses) | Off-target | **Inaccurate (refuses)** |
 
-Honest tally: **3 accurate, 1 partially accurate, 1 inaccurate.**
+Honest tally: **3 accurate, 1 partially accurate, 1 inaccurate.** Q5 is judged inaccurate because
+the system fails to answer a question the corpus *does* contain material for — though it fails
+*safely* by refusing rather than fabricating (see below).
 
 ---
 
@@ -264,19 +271,27 @@ Honest tally: **3 accurate, 1 partially accurate, 1 inaccurate.**
 
 **Question that failed:** *"What's the best dining hall at UC Berkeley according to students?"* (Q5)
 
-**What the system returned:** "According to students, the best dining hall at UC Berkeley is
-Foothill... noted as having the 'objectively the best' dining hall [4]." It singled out one hall.
+**What the system returned:** *"I don't have enough information on that."* — a refusal.
 
 **Root cause (tied to the retrieval stage):** This is a **retrieval failure**, not a generation
-failure. "Best dining hall" is an *abstract* query with no single matching chunk — my sources
-crown **three different halls** as #1 (visit.berkeley.edu → Clark Kerr; Her Campus → Crossroads;
-RateMyDorm → Foothill "objectively the best"). Cosine similarity pulled a **generic** chunk to the
-top — SAF's "Berkeley's dining system simplifies meals for students" at distance 0.30 — ahead of
-the actual ranking chunks, because that filler text is lexically close to the query while carrying
-no ranking. Of the ranking chunks, only Foothill's made the top-4, so the LLM faithfully echoed the
-one chunk that literally said "objectively the best." The generation behaved correctly given its
-context; the context was incomplete because retrieval couldn't localize a concept ("best") that is
-distributed across conflicting chunks.
+failure. "Best dining hall" is an *abstract* query with no single matching chunk — my sources crown
+**at least three different halls** as #1 (visit.berkeley.edu → Clark Kerr; Her Campus → Crossroads;
+RateMyDorm → Foothill; plus raw Reddit threads that say "clark kerr is the best" and "foothill is
+the best hands down"). Cosine similarity pulls a **generic** chunk to the top — SAF's "Berkeley's
+dining system simplifies meals for students" at distance 0.30 — ahead of the actual ranking chunks,
+because that filler text is lexically close to the query while carrying no ranking. The rest of the
+top-4 fills with *Cafe-3-is-bad* chunks, so no retrieved passage actually states which hall is
+best, and the grounding prompt correctly refuses.
+
+**A revealing experiment:** before I added the raw Reddit "best hall" threads (sources 11 & 13),
+this same question returned a *confidently wrong* answer — "Foothill is the best" — because the one
+ranking chunk that reached the top-4 happened to say "objectively the best." After adding two more
+sources that explicitly debate the question, the answer changed to an honest refusal. **More data
+did not fix the failure** — it moved the system from a confident wrong answer to a safe non-answer,
+because the underlying problem is the embedding model's inability to localize the abstract concept
+"best" across chunks that each name a *different* hall. This is the strongest argument for the
+hybrid-search stretch feature: a keyword signal on "best" would surface the ranking chunks that
+semantic search buries.
 
 **Secondary example (same root cause):** Q1 missed Korean Fried Chicken / waffles because the chunk
 naming them leads with "The writer admits hearing Croads slander..." — its dominant embedded theme
@@ -296,19 +311,21 @@ every hall some source calls best**, rather than reporting a single winner.
 
 **One way the spec helped me during implementation:** Writing the Chunking Strategy section in
 `planning.md` *before* coding meant I had already decided on paragraph chunking and could justify
-it — so when ingestion produced 54 chunks and inspection turned up 6 short "intro" fragments, I had
+it — so when ingestion produced the first 54 chunks and inspection turned up 6 short "intro" fragments, I had
 a clear principle ("one self-contained hall/topic per chunk") to measure against, and the fix
 (dropping short leading paragraphs) followed directly from the spec instead of being an ad-hoc
 patch. The eval plan also pre-committed me to two conflicting-source "trap" questions, which is why
 the failure cases were anticipated rather than surprises.
 
 **One way my implementation diverged from the spec, and why:** My spec assumed I would collect
-documents from Reddit and Yelp threads. In practice both **blocked automated collection** (403 /
-JavaScript), so I pivoted to student blogs, campus review sites, and the Daily Californian, and the
-text ended up **condensed by an automated fetch step** rather than raw-pasted. The retrieval
-approach (all-MiniLM-L6-v2, k=4) stayed exactly as specced — I tested raising k to rescue Q1's
-missing fact, found it still ranked 11th, and **kept k=4** rather than flooding every query with
-noise, consistent with the spec's reasoning that too-high k dilutes context.
+documents from Reddit and Yelp threads via code. In practice both **blocked automated collection**
+(403 / JavaScript), so sources 1–10 came from student blogs and the Daily Californian with their
+text condensed by an automated fetch step. I then went back and **hand-copied three raw, verbatim
+Reddit/Yelp sources** (11–13) to firm up the "real collected documents" requirement, growing the
+corpus to 13 docs / 75 chunks. The retrieval approach (all-MiniLM-L6-v2, k=4) stayed exactly as
+specced — I tested raising k to rescue Q1's missing fact, found it still ranked 11th, and **kept
+k=4** rather than flooding every query with noise, consistent with the spec's reasoning that
+too-high k dilutes context.
 
 ---
 
@@ -328,8 +345,13 @@ and prose from them, which I reviewed and corrected.
   each page rather than returning raw text. It also caught one wrong source (a "Crossroads" page
   that was a restaurant in Shillong, India) and discarded it.
 - *What I changed or directed:* I required that no content be fabricated, that each file record its
-  real source URL, and that this condensation be disclosed here (it is). The documents are real and
-  attributed, but **lightly paraphrased by the automated fetch**, not verbatim scrapes.
+  real source URL, and that this condensation be disclosed here (it is). Sources 1–10 are real and
+  attributed, but **lightly paraphrased by the automated fetch**, not verbatim. To firm up the
+  primary-source requirement, I then **hand-copied raw text from two r/berkeley threads and a Yelp
+  Cafe 3 page** (sources 11–13) and had Claude clean them — stripping usernames, vote counts, the
+  injected "Promoted" ad, and the subreddit sidebar — while keeping every student comment verbatim.
+  I directed it to drop one off-domain Yelp review (a disgruntled *employee* complaining about
+  hairnets, not a diner's opinion of the food).
 
 **Instance 2 — Chunking fix after inspection**
 - *What I gave the AI:* my Chunking Strategy section and the instruction to inspect the output
